@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Comparison Tool - Upload</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-section {
+            margin-bottom: 25px;
+        }
+
+        .upload-section>label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .file-upload-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        /* Hide the actual file input */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Style the label as a button */
+        .file-upload-label {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background 0.3s;
+            white-space: nowrap;
+            display: inline-block;
+            text-align: center;
+            user-select: none;
+        }
+
+        .file-upload-label:hover {
+            background: #5568d3;
+        }
+
+        .file-upload-label:active {
+            background: #4458c2;
+        }
+
+        .file-display {
+            flex: 1;
+            padding: 12px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+            color: #666;
+            font-size: 14px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+
+        .file-display.has-file {
+            border-color: #667eea;
+            background: #f0f0ff;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .compare-button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 20px;
+        }
+
+        .compare-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .compare-button:active {
+            transform: translateY(0);
+        }
+
+        .compare-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: #667eea;
+        }
+
+        .error {
+            display: none;
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📊 Data Comparison Tool</h1>
+        <p class="subtitle">Compare 正解データ and Robota結果 tabs within a single Excel file</p>
+
+        <div class="info-box">
+            <strong>Required:</strong> Upload an Excel file (.xlsx, .xls) containing both:<br>
+            • Tab named "正解データ" (Ground Truth Data)<br>
+            • Tab named "Robota結果" (Robota Results)
+        </div>
+
+        <form id="comparisonForm" action="#" method="post" enctype="multipart/form-data">
+            <div class="upload-section">
+                <label for="excelFile">Excel File:</label>
+                <div class="file-upload-wrapper">
+                    <input type="file" id="excelFile" name="excel_file" accept=".xlsx,.xls" required>
+                    <label for="excelFile" id="fileInputLabel" class="file-upload-label">Choose File</label>
+                    <div class="file-display" id="fileDisplay">No file chosen</div>
+                </div>
+            </div>
+
+            <button type="submit" class="compare-button" id="compareBtn">
+                Compare Tabs
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            ⏳ Comparing files... Please wait.
+        </div>
+
+        <div class="error" id="error"></div>
+    </div>
+
+    <script>
+        // Get all elements
+        const form = document.getElementById('comparisonForm');
+        const compareBtn = document.getElementById('compareBtn');
+        const loading = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+
+        const fileInput = document.getElementById('excelFile');
+        const fileInputLabel = document.getElementById('fileInputLabel');
+        const fileDisplay = document.getElementById('fileDisplay');
+
+        // File change handler - update display when file is selected
+        fileInput.addEventListener('change', function (e) {
+            console.log('Excel file changed');
+            if (e.target.files && e.target.files.length > 0) {
+                const fileName = e.target.files[0].name;
+                fileDisplay.textContent = fileName;
+                fileDisplay.classList.add('has-file');
+                console.log('File selected:', fileName);
+            } else {
+                fileDisplay.textContent = 'No file chosen';
+                fileDisplay.classList.remove('has-file');
+            }
+        });
+
+        // Button click handler - open file selector if no file, otherwise submit
+        compareBtn.addEventListener('click', function (e) {
+            // If no file is selected, trigger the file input
+            if (!fileInput.files || fileInput.files.length === 0) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                console.log('No file selected - opening file picker...');
+                // Try clicking the label first (preserves user activation better)
+                if (fileInputLabel) {
+                    fileInputLabel.click();
+                } else if (fileInput) {
+                    // Fallback: try clicking the input directly
+                    fileInput.click();
+                } else {
+                    errorDiv.textContent = 'File input not found. Please refresh the page.';
+                    errorDiv.style.display = 'block';
+                }
+                return false;
+            }
+            // If file is selected, let the form submit normally
+        });
+
+        // Form submission
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            // Check if file is selected
+            if (!fileInput.files || fileInput.files.length === 0) {
+                // Trigger file selector
+                compareBtn.click();
+                return;
+            }
+
+            const formData = new FormData(form);
+
+            // Reset UI
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+            loading.style.display = 'block';
+            compareBtn.disabled = true;
+
+            try {
+                const response = await fetch('/comparison/api/compare', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(errorData.detail || `Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.result) {
+                    // Store result in sessionStorage and redirect to results page
+                    sessionStorage.setItem('comparisonResult', JSON.stringify(data.result));
+                    window.location.href = '/comparison/results';
+                } else {
+                    throw new Error(data.error || 'Comparison failed');
+                }
+            } catch (err) {
+                console.error('Comparison error:', err);
+                errorDiv.textContent = `Error: ${err.message}`;
+                errorDiv.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+                compareBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
