@@ -45,11 +45,6 @@ htmlcov/
 
 # Vercel
 .vercel
-vercel.json
-api/
-
-# Railway
-.railway
 
 # OS
 .DS_Store
