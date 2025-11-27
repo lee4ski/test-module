@@ -1,0 +1,6 @@
+# Development dependencies (not needed for production deployment)
+pytest==7.4.4
+pytest-cov==4.1.0
+pytest-playwright==0.4.3
+playwright==1.40.0
+
